@@ -7,6 +7,10 @@ import {InitialStateInterFace, GameContextInterface, ACTIONTYPE} from  '../types
 import axios from 'axios'
 import { getStoredPlayer, storePlayer } from '../utils/localStorage';
 
+import dotenv from 'dotenv';
+
+dotenv.config();
+
 const NANE_AND_ID = '2048.vs_board';
 
 const GameContext = createContext({} as GameContextInterface);
@@ -21,8 +25,9 @@ const initialState: InitialStateInterFace = {
   score: 0,
   difficulty : "easy",
   id: undefined,
+  animations: []
 }
-const url_base = "http://47.101.139.249/api/"
+const url_base = process.env.REACT_APP_API_URL;
 const LeadPlayBoard = "LeadPlayBoard"
 
 async function nicknameIsContain(url : string)
@@ -47,7 +52,7 @@ async function registerNickname(nickname : string,score :number)
     score:score
     }
 
-    const req =  await axios.post(url_base+"players",jsons).then(response=> (
+    const req =  await axios.post(url_base+"/players",jsons).then(response=> (
       localStorage.setItem(
         LeadPlayBoard,
         JSON.stringify({
@@ -72,7 +77,7 @@ function reducer(draft: typeof initialState, action: ACTIONTYPE) {
       draft.isPlaying = true
       storeBoard({board: draft.board, score: draft.score})
 
-      var url = url_base+"players/" + nickname
+      var url = url_base+"/players/" + nickname
 
       nicknameIsContain(url);
 
@@ -86,6 +91,7 @@ function reducer(draft: typeof initialState, action: ACTIONTYPE) {
       draft.board = moveResult.board
       draft.score += moveResult.scoreIncrease;
       draft.scoreIncrease = moveResult.scoreIncrease;
+      draft.animations = moveResult.animations;
 
       if(draft.difficulty === 'hard')  draft.board = addHard(draft.board).board
 
@@ -99,7 +105,7 @@ function reducer(draft: typeof initialState, action: ACTIONTYPE) {
 
       //数据传输
       const rawData = JSON.parse(localStorage.getItem(LeadPlayBoard) as string)
-      if(rawData['id']==null)
+      if(rawData==null)
       {
         registerNickname(nickname as string,draft.score)
         return
@@ -115,7 +121,7 @@ function reducer(draft: typeof initialState, action: ACTIONTYPE) {
           nickname:nickname,
           score:draft.score
       }
-      url = url_base + "players/" + rawData1["id"]["_id"]
+      url = url_base + "/players/" + rawData1["id"]["_id"]
       axios.patch(url,jsons).then(response=> (
         localStorage.setItem(
           "ID",
@@ -252,7 +258,7 @@ interface GameProviderProps {
 
 export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
   const [state, dispatch] = useImmerReducer(reducer, initialState);
-  const {gameType, boardSize, board, gameResult, previousBoard, score, scoreIncrease, isPlaying, gameId, endTime, opponentBoard, opponentScore ,difficulty,id} = state
+  const {gameType, boardSize, board, gameResult, previousBoard, score, animations, scoreIncrease, isPlaying, gameId, endTime, opponentBoard, opponentScore ,difficulty,id} = state
 
 
   const handleGameEvent = (eventType: string) => {
@@ -277,6 +283,7 @@ export const GameProvider: React.FC<GameProviderProps> = ({ children }) => {
         board,
         previousBoard,
         score,
+        animations,
         gameResult,
         scoreIncrease,
         isPlaying,
